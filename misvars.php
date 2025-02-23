@@ -1,9 +1,9 @@
 <?php
 // Configuración de la base de datos
-define('DB_HOST', 'localhost');
-define('DB_USER', 'tu_usuario');
-define('DB_PASS', 'tu_password');
-define('DB_NAME', 'riffdinanza');
+define('DB_HOST', 'db5017270149.hosting-data.io');
+define('DB_USER', 'dbu5544628');
+define('DB_PASS', 'RiffBBDDDanza25');
+define('DB_NAME', 'dbs13857869');
 
 // Configuración del sitio
 define('SITE_NAME', 'Riffdinanza');
@@ -11,8 +11,8 @@ define('SITE_AUTHOR', 'Javi Solera');
 define('CONTACT_EMAIL', 'info@turbillosolera.com');
 
 // Configuración de reCAPTCHA (necesitarás registrarte en Google reCAPTCHA)
-define('RECAPTCHA_SITE_KEY', 'tu_site_key');
-define('RECAPTCHA_SECRET_KEY', 'tu_secret_key');
+define('RECAPTCHA_SITE_KEY', '6LekYeAqAAAAANWEVihfnzfqO_EQBP3Vh_KZpPZy');
+define('RECAPTCHA_SECRET_KEY', '6LekYeAqAAAAAEd1ZvAHDRM6xumJ96-gk2Ojjogo');
 
 // Configuración de SMTP
 define('SMTP_HOST', 'smtp.tuservidor.com');

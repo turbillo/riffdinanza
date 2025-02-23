@@ -5,7 +5,7 @@ $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Verificar captcha
-    $captcha = $_POST['g-recaptcha-response'];
+    $captcha = $_POST['g-recaptcha-response'] ?? '';
     $secretKey = RECAPTCHA_SECRET_KEY;
     $verify = file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret={$secretKey}&response={$captcha}");
     $captchaResult = json_decode($verify);
@@ -18,21 +18,44 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         try {
             $db = getDBConnection();
-            $stmt = $db->prepare("SELECT id, password FROM users WHERE email = ?");
+            
+            // Añadimos un log para debug
+            error_log("Intento de login para email: " . $email);
+            
+            $stmt = $db->prepare("SELECT id, email, password FROM users WHERE email = ?");
             $stmt->execute([$email]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($user && password_verify($password, $user['password'])) {
-                $_SESSION['user_id'] = $user['id'];
-                header('Location: index.php');
-                exit;
+            if ($user) {
+                // Añadimos logs para debug
+                error_log("Usuario encontrado con ID: " . $user['id']);
+                
+                if (password_verify($password, $user['password'])) {
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['user_email'] = $user['email'];
+                    
+                    error_log("Login exitoso para usuario ID: " . $user['id']);
+                    
+                    header('Location: index.php');
+                    exit;
+                } else {
+                    error_log("Contraseña incorrecta para usuario ID: " . $user['id']);
+                    $error = "Correo electrónico o contraseña incorrectos.";
+                }
             } else {
+                error_log("No se encontró usuario con email: " . $email);
                 $error = "Correo electrónico o contraseña incorrectos.";
             }
         } catch (PDOException $e) {
+            error_log("Error en login: " . $e->getMessage());
             $error = "Error en el inicio de sesión. Por favor, intenta más tarde.";
         }
     }
+}
+
+// Añadimos un log para ver si hay sesión activa
+if (isset($_SESSION['user_id'])) {
+    error_log("Sesión activa para usuario ID: " . $_SESSION['user_id']);
 }
 ?>
 
@@ -75,7 +98,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             border-radius: 4px;
             cursor: pointer;
         }
-        .error { color: var(--accent); }
+        .error { 
+            color: var(--accent); 
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            background-color: rgba(231, 76, 60, 0.1);
+        }
+        .debug-info {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -95,7 +132,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <form method="POST" action="">
             <div class="form-group">
                 <label for="email">Correo Electrónico:</label>
-                <input type="email" id="email" name="email" required>
+                <input type="email" id="email" name="email" required 
+                       value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
             </div>
 
             <div class="form-group">
@@ -109,6 +147,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             <button type="submit" class="btn">Iniciar Sesión</button>
         </form>
+
+        <?php if (defined('DEBUG') && DEBUG): ?>
+        <div class="debug-info">
+            <p>Session ID: <?php echo session_id(); ?></p>
+            <p>Session Data: <?php print_r($_SESSION); ?></p>
+        </div>
+        <?php endif; ?>
     </div>
 </body>
 </html> 

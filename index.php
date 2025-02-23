@@ -31,8 +31,66 @@ $total_pages = ceil($total_videos / $videos_per_page);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo SITE_NAME; ?></title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .header-banner {
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+                        url('assets/images/guitar-header.jpg') center/cover;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: white;
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .header-banner h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .header-description {
+            max-width: 800px;
+            margin: 0 auto 3rem;
+            padding: 2rem;
+            text-align: center;
+            line-height: 1.6;
+            font-size: 1.2rem;
+            color: var(--text);
+        }
+
+        .highlight {
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-top: 2rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--light);
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
@@ -46,6 +104,39 @@ $total_pages = ceil($total_videos / $videos_per_page);
         <?php endif; ?>
         <a href="contact.php">Contacto</a>
     </nav>
+
+    <header class="header-banner">
+        <h1><?php echo SITE_NAME; ?></h1>
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number"><?php echo $total_videos; ?></div>
+                <div class="stat-label">Vídeos</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number"><?php 
+                    $stmt = $db->query("SELECT COUNT(*) FROM users");
+                    echo $stmt->fetchColumn();
+                ?></div>
+                <div class="stat-label">Usuarios</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="header-description">
+        <h2>Bienvenido a la Comunidad de Guitarristas</h2>
+        <p>
+            Riffdinanza es tu destino definitivo para descubrir, aprender y compartir 
+            los mejores tutoriales de guitarra. Desde legendarios solos de rock hasta 
+            técnicas avanzadas de shred, nuestra comunidad reúne contenido de calidad 
+            para guitarristas de todos los niveles.
+        </p>
+        <p>
+            Únete a nuestra comunidad para <span class="highlight">compartir tus videos favoritos</span>, 
+            interactuar con otros guitarristas y ser parte de este viaje musical. 
+            Ya sea que estés comenzando tu camino en la guitarra o seas un músico experimentado, 
+            aquí encontrarás inspiración y recursos para mejorar tu técnica.
+        </p>
+    </div>
 
     <div class="video-grid">
         <?php foreach($videos as $video): ?>

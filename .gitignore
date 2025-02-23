@@ -1,1 +1,24 @@
- 
+# Archivo de configuración
+misvars.php
+
+# Dependencias
+/vendor/
+/node_modules/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de IDE/editores
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Logs y bases de datos
+*.log
+*.sql
+*.sqlite
+
+# Archivos de caché
+*.cache 
