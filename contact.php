@@ -12,9 +12,51 @@ $success = '';
 // Función simple para guardar mensaje
 function saveMessage($name, $email, $message) {
     try {
+        // Guardar en base de datos
         $db = getDBConnection();
         $stmt = $db->prepare("INSERT INTO contact_messages (name, email, message) VALUES (?, ?, ?)");
-        return $stmt->execute([$name, $email, $message]);
+        $stmt->execute([$name, $email, $message]);
+
+        // Preparar el email
+        $to = SMTP_FROM;
+        $subject = "Nuevo mensaje de contacto desde " . SITE_NAME;
+        
+        // Crear cabeceras para formato HTML
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $headers .= "From: " . SMTP_FROM . "\r\n";
+        $headers .= "Reply-To: " . $email . "\r\n";
+        $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
+
+        // Crear cuerpo del email en HTML
+        $emailBody = "
+        <html>
+        <head>
+            <title>Nuevo mensaje de contacto</title>
+        </head>
+        <body style='font-family: Arial, sans-serif;'>
+            <h2>Nuevo mensaje de contacto desde " . SITE_NAME . "</h2>
+            <p><strong>Nombre:</strong> " . htmlspecialchars($name) . "</p>
+            <p><strong>Email:</strong> " . htmlspecialchars($email) . "</p>
+            <p><strong>Mensaje:</strong></p>
+            <p style='background: #f5f5f5; padding: 10px; border-radius: 5px;'>" 
+                . nl2br(htmlspecialchars($message)) . 
+            "</p>
+            <hr>
+            <p style='color: #666; font-size: 12px;'>
+                Este mensaje fue enviado desde el formulario de contacto de " . SITE_NAME . "
+            </p>
+        </body>
+        </html>";
+
+        // Enviar email
+        if(mail($to, $subject, $emailBody, $headers)) {
+            return true;
+        } else {
+            error_log("Error al enviar email de contacto");
+            return false;
+        }
+
     } catch (PDOException $e) {
         error_log("Error DB: " . $e->getMessage());
         return false;

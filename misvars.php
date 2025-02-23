@@ -14,12 +14,12 @@ define('CONTACT_EMAIL', 'info@turbillosolera.com');
 define('RECAPTCHA_SITE_KEY', '6LekYeAqAAAAANWEVihfnzfqO_EQBP3Vh_KZpPZy');
 define('RECAPTCHA_SECRET_KEY', '6LekYeAqAAAAAEd1ZvAHDRM6xumJ96-gk2Ojjogo');
 
-// Configuración de SMTP
-define('SMTP_HOST', 'smtp.tuservidor.com');
-define('SMTP_USER', 'tu_usuario_smtp');
-define('SMTP_PASS', 'tu_password_smtp');
-define('SMTP_PORT', 587);
-
+// Configuración de correo para IONOS
+define('SMTP_HOST', 'smtp.ionos.es');
+define('SMTP_USER', 'info@turbillosolera.com');  // Tu dirección de correo completa
+define('SMTP_PASS', 'Turbill0Corr10!');           // La contraseña de tu correo
+define('SMTP_PORT', 587);                       // Puerto SMTP de IONOS
+define('SMTP_FROM', 'info@turbillosolera.com'); // Tu dirección de correo
 
 // Configuración de sesión
 session_start();
