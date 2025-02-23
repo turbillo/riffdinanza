@@ -1,0 +1,52 @@
+:root {
+    --primary: #2D3E50;
+    --secondary: #3498DB;
+    --accent: #E74C3C;
+    --background: #F5F6FA;
+    --text: #2C3E50;
+    --light: #ECF0F1;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--background);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+}
+
+.navbar {
+    background-color: var(--primary);
+    padding: 1rem;
+}
+
+.navbar a {
+    color: var(--light);
+    text-decoration: none;
+    margin: 0 1rem;
+}
+
+.video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    padding: 2rem;
+}
+
+.video-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.video-info {
+    padding: 1rem;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem;
+} 
