@@ -4,6 +4,7 @@ misvars.php
 # Dependencias
 /vendor/
 /node_modules/
+/logs/
 
 # Archivos de sistema
 .DS_Store
