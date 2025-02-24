@@ -12,10 +12,12 @@ Thumbs.db
 # Archivos de IDE/editores
 .idea/
 .vscode/
+.vs/
 *.sublime-project
 *.sublime-workspace
 
 # Logs y bases de datos
+/logs/
 *.log
 *.sql
 *.sqlite
