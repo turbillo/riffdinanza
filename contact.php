@@ -65,17 +65,27 @@ function saveMessage($name, $email, $message) {
 
 // Procesar formulario
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $name = $_POST['name'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $message = $_POST['message'] ?? '';
+    // Verificar captcha primero
+    $captcha = $_POST['g-recaptcha-response'] ?? '';
+    $secretKey = RECAPTCHA_SECRET_KEY;
+    $verify = file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret={$secretKey}&response={$captcha}");
+    $captchaResult = json_decode($verify);
 
-    if (empty($name) || empty($email) || empty($message)) {
-        $error = "Todos los campos son obligatorios.";
+    if (!$captchaResult->success) {
+        $error = "Por favor, verifica que no eres un robot.";
     } else {
-        if (saveMessage($name, $email, $message)) {
-            $success = "¡Mensaje enviado correctamente! Te responderemos lo antes posible.";
+        $name = $_POST['name'] ?? '';
+        $email = $_POST['email'] ?? '';
+        $message = $_POST['message'] ?? '';
+
+        if (empty($name) || empty($email) || empty($message)) {
+            $error = "Todos los campos son obligatorios.";
         } else {
-            $error = "Error al enviar el mensaje. Por favor, inténtalo de nuevo.";
+            if (saveMessage($name, $email, $message)) {
+                $success = "¡Mensaje enviado correctamente! Te responderemos lo antes posible.";
+            } else {
+                $error = "Error al enviar el mensaje. Por favor, inténtalo de nuevo.";
+            }
         }
     }
 }
@@ -89,6 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <title>Contacto - <?php echo SITE_NAME; ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <style>
         .contact-container {
             max-width: 800px;
@@ -261,6 +272,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <label for="message">Mensaje:</label>
                 <textarea id="message" name="message" required
                           placeholder="¿Qué te gustaría decirnos?"><?php echo isset($_POST['message']) ? htmlspecialchars($_POST['message']) : ''; ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
             </div>
 
             <button type="submit" class="submit-btn">Enviar Mensaje</button>
