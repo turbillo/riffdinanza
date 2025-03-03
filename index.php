@@ -94,15 +94,25 @@ $total_pages = ceil($total_videos / $videos_per_page);
 </head>
 <body>
     <nav class="navbar">
-        <a href="index.php"><?php echo SITE_NAME; ?></a>
-        <?php if(isset($_SESSION['user_id'])): ?>
-            <a href="submit-video.php">Recomendar Vídeo</a>
-            <a href="logout.php">Cerrar Sesión</a>
-        <?php else: ?>
-            <a href="login.php">Iniciar Sesión</a>
-            <a href="register.php">Registrarse</a>
-        <?php endif; ?>
-        <a href="contact.php">Contacto</a>
+        <div class="nav-left">
+            <a href="index.php"><?php echo SITE_NAME; ?></a>
+            <?php if(isset($_SESSION['user_id'])): ?>
+                <a href="submit-video.php">Recomendar Vídeo</a>
+                <?php if($_SESSION['user_id'] < 4): ?>
+                    <a href="usersmanagement.php">Gestión Usuarios</a>
+                <?php endif; ?>
+            <?php endif; ?>
+            <a href="contact.php">Contacto</a>
+        </div>
+        <div class="nav-right">
+            <?php if(isset($_SESSION['user_id'])): ?>
+                <span class="user-email"><?php echo htmlspecialchars($_SESSION['user_email'] ?? ''); ?></span>
+                <a href="logout.php" class="auth-link">Cerrar Sesión</a>
+            <?php else: ?>
+                <a href="register.php" class="auth-link">Registrarse</a>
+                <a href="login.php" class="auth-link">Iniciar Sesión</a>
+            <?php endif; ?>
+        </div>
     </nav>
 
     <header class="header-banner">

@@ -28,3 +28,7 @@ CREATE TABLE contact_messages (
     message TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ); 
+
+
+ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'usuario';
+
