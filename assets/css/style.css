@@ -215,4 +215,32 @@ body {
     opacity: 0.9;
     text-transform: uppercase;
     letter-spacing: 1px;
+}
+
+/* Estilos base para todos los enlaces del navbar */
+.navbar a {
+    color: white;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.navbar a:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Estilo para el enlace activo */
+.navbar a.active {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Mantener los estilos específicos para auth-link */
+.navbar .auth-link {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.navbar .auth-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
 } 

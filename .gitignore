@@ -2,15 +2,16 @@
 misvars.php
 
 # Dependencias
-/vendor/
-/node_modules/
-/logs/
+vendor/
+node_modules/
 
 # Archivos de sistema
 .DS_Store
 Thumbs.db
 
-# Archivos de IDE/editores
+# Archivos de IDE/editores y entornos
+.env
+.env.local
 .idea/
 .vscode/
 .vs/
