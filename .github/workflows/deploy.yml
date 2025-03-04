@@ -22,5 +22,5 @@ jobs:
         SFTP_USER: ${{ secrets.SFTP_USERNAME }}
         SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
       run: |
-        lftp -e "set sftp:auto-confirm yes; mirror -R ./riffdinanza /; quit" -u $SFTP_USER,$SFTP_PASSWORD sftp://$SFTP_HOST
+        lftp -e "set sftp:auto-confirm yes; mirror -R ./ /; quit" -u $SFTP_USER,$SFTP_PASSWORD sftp://$SFTP_HOST
 
