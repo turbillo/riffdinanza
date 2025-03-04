@@ -4,21 +4,41 @@ header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json');
 
-require_once 'config/database.php';
+// Manejo de errores personalizado
+function customErrorHandler($errno, $errstr, $errfile, $errline) {
+    sendResponse([
+        'success' => false,
+        'message' => 'Error interno del servidor',
+        'debug' => [
+            'error' => $errstr,
+            'file' => $errfile,
+            'line' => $errline
+        ]
+    ], 500);
+}
+set_error_handler("customErrorHandler");
 
-// Manejo de errores
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// Captura de errores fatales
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== NULL && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        sendResponse([
+            'success' => false,
+            'message' => 'Error fatal del servidor',
+            'debug' => $error
+        ], 500);
+    }
+});
 
-// Inicializar la conexión a la base de datos
-$database = new Database();
-$db = $database->getConnection();
-
-// Obtener la ruta y el método de la solicitud
-$requestMethod = $_SERVER['REQUEST_METHOD'];
-$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$uri = explode('/', $uri);
-$uri = array_values(array_filter($uri));
+// Incluir archivo de configuración de base de datos
+$config_path = __DIR__ . '/config/database.php';
+if (!file_exists($config_path)) {
+    sendResponse([
+        'success' => false,
+        'message' => 'Error de configuración del servidor'
+    ], 500);
+}
+require_once $config_path;
 
 // Función para enviar respuesta JSON
 function sendResponse($data, $statusCode = 200) {
@@ -27,82 +47,78 @@ function sendResponse($data, $statusCode = 200) {
     exit();
 }
 
-// Función para verificar el token JWT
-function validateToken($token) {
-    // Aquí implementarías la validación del token JWT
-    // Por ahora retornamos true para el ejemplo
-    return true;
-}
+try {
+    // Inicializar la conexión a la base de datos
+    $database = new Database();
+    $db = $database->getConnection();
 
-// Verificar token para rutas protegidas
-function checkAuth() {
-    $headers = getallheaders();
-    if (!isset($headers['Authorization'])) {
-        sendResponse([
-            'success' => false,
-            'message' => 'Token no proporcionado'
-        ], 401);
-    }
+    // Obtener la ruta y el método de la solicitud
+    $requestMethod = $_SERVER['REQUEST_METHOD'];
+    $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $uri = explode('/', $uri);
     
-    $token = str_replace('Bearer ', '', $headers['Authorization']);
-    if (!validateToken($token)) {
-        sendResponse([
-            'success' => false,
-            'message' => 'Token inválido'
-        ], 401);
+    // Eliminar elementos vacíos y ajustar la ruta
+    $uri = array_values(array_filter($uri, function($segment) {
+        return $segment !== '';
+    }));
+
+    // Función para verificar el token JWT
+    function validateToken($token) {
+        // Por ahora retornamos true para pruebas
+        return true;
     }
-}
 
-// Manejar solicitud OPTIONS (para CORS)
-if ($requestMethod === 'OPTIONS') {
-    sendResponse(['status' => 'ok']);
-}
-
-// Rutas de la API
-if (count($uri) >= 3 && $uri[0] === 'api' && $uri[1] === 'v1' && $uri[2] === 'mobile') {
-    
-    // POST /api/v1/mobile/login
-    if ($requestMethod === 'POST' && isset($uri[3]) && $uri[3] === 'login') {
-        try {
-            $jsonData = file_get_contents('php://input');
-            $data = json_decode($jsonData, true);
-            
-            if (!isset($data['email']) || !isset($data['password'])) {
-                throw new Exception('Email y contraseña son requeridos');
-            }
-            
-            // Aquí verificarías las credenciales contra la base de datos
-            $stmt = $db->prepare("SELECT id, email FROM users WHERE email = ? AND password = ?");
-            $stmt->execute([$data['email'], hash('sha256', $data['password'])]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($user) {
-                // Aquí generarías el token JWT
-                $token = "ejemplo_token_jwt"; // Implementar generación real de JWT
-                
-                sendResponse([
-                    'success' => true,
-                    'message' => 'Login exitoso',
-                    'token' => $token,
-                    'user' => [
-                        'id' => $user['id'],
-                        'email' => $user['email']
-                    ]
-                ]);
-            } else {
-                throw new Exception('Credenciales inválidas');
-            }
-        } catch (Exception $e) {
+    // Verificar token para rutas protegidas
+    function checkAuth() {
+        $headers = getallheaders();
+        if (!isset($headers['Authorization'])) {
             sendResponse([
                 'success' => false,
-                'message' => $e->getMessage()
-            ], 400);
+                'message' => 'Token no proporcionado'
+            ], 401);
+        }
+        
+        $token = str_replace('Bearer ', '', $headers['Authorization']);
+        if (!validateToken($token)) {
+            sendResponse([
+                'success' => false,
+                'message' => 'Token inválido'
+            ], 401);
         }
     }
-    
+
+    // Manejar solicitud OPTIONS (para CORS)
+    if ($requestMethod === 'OPTIONS') {
+        sendResponse(['status' => 'ok']);
+    }
+
+    // GET /api/v1/mobile/videos
+    if ($requestMethod === 'GET' && 
+        isset($uri[2]) && $uri[2] === 'mobile' && 
+        isset($uri[3]) && $uri[3] === 'videos') {
+        
+        try {
+            $stmt = $db->prepare("SELECT * FROM videos ORDER BY created_at DESC");
+            $stmt->execute();
+            $videos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            sendResponse([
+                'success' => true,
+                'data' => $videos
+            ]);
+        } catch (PDOException $e) {
+            sendResponse([
+                'success' => false,
+                'message' => 'Error al obtener los videos',
+                'debug' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     // POST /api/v1/mobile/videos
-    if ($requestMethod === 'POST' && isset($uri[3]) && $uri[3] === 'videos') {
-        checkAuth(); // Verificar token
+    if ($requestMethod === 'POST' && 
+        isset($uri[2]) && $uri[2] === 'mobile' && 
+        isset($uri[3]) && $uri[3] === 'videos') {
         
         try {
             $jsonData = file_get_contents('php://input');
@@ -112,15 +128,12 @@ if (count($uri) >= 3 && $uri[0] === 'api' && $uri[1] === 'v1' && $uri[2] === 'mo
                 throw new Exception('URL y título son requeridos');
             }
             
-            // Validar que la URL sea válida
             if (!filter_var($data['url'], FILTER_VALIDATE_URL)) {
                 throw new Exception('URL inválida');
             }
             
-            // Guardar el video en la base de datos
-            $stmt = $db->prepare("INSERT INTO videos (user_id, title, url, created_at) VALUES (?, ?, ?, NOW())");
+            $stmt = $db->prepare("INSERT INTO videos (title, url, created_at) VALUES (?, ?, NOW())");
             $stmt->execute([
-                1, // Aquí iría el ID del usuario obtenido del token
                 $data['title'],
                 $data['url']
             ]);
@@ -142,31 +155,17 @@ if (count($uri) >= 3 && $uri[0] === 'api' && $uri[1] === 'v1' && $uri[2] === 'mo
             ], 400);
         }
     }
-    
-    // GET /api/v1/mobile/videos
-    if ($requestMethod === 'GET' && isset($uri[3]) && $uri[3] === 'videos') {
-        checkAuth(); // Verificar token
-        
-        try {
-            $stmt = $db->prepare("SELECT * FROM videos ORDER BY created_at DESC");
-            $stmt->execute();
-            $videos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            sendResponse([
-                'success' => true,
-                'data' => $videos
-            ]);
-        } catch (Exception $e) {
-            sendResponse([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 400);
-        }
-    }
-}
 
-// Si no se encuentra la ruta
-sendResponse([
-    'success' => false,
-    'message' => 'Ruta no encontrada'
-], 404); 
+    // Si no se encuentra la ruta
+    sendResponse([
+        'success' => false,
+        'message' => 'Ruta no encontrada'
+    ], 404);
+
+} catch (Exception $e) {
+    sendResponse([
+        'success' => false,
+        'message' => 'Error interno del servidor',
+        'debug' => $e->getMessage()
+    ], 500);
+} 
