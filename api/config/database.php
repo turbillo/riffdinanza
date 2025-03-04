@@ -1,9 +1,14 @@
+
+
 <?php
+
+require_once '../../misvars.php';
+
 class Database {
-    private $host = "localhost";
-    private $db_name = "nombre_de_tu_base_de_datos";
-    private $username = "tu_usuario";
-    private $password = "tu_contraseña";
+    private $host = DB_HOST;
+    private $db_name = DB_NAME;
+    private $username = DB_USER;
+    private $password = DB_PASS;
     public $conn;
 
     public function getConnection() {
