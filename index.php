@@ -121,8 +121,11 @@ $total_pages = ceil($total_videos / $videos_per_page);
             <a href="index.php"><?php echo SITE_NAME; ?></a>
             <?php if(isset($_SESSION['user_id'])): ?>
                 <a href="submit-video.php">Recomendar Vídeo</a>
-                <?php if($_SESSION['user_id'] < 4): ?>
+                <?php if($_SESSION['user_id'] <= 4): ?>
                     <a href="usersmanagement.php">Gestión Usuarios</a>
+                <?php endif; ?>
+                <?php if($_SESSION['user_id'] <= 4): ?>
+                    <a href="usersaudit.php">Auditoría Usuarios</a>
                 <?php endif; ?>
             <?php endif; ?>
             <a href="contact.php">Contacto</a>
