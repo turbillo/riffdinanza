@@ -35,8 +35,8 @@ $total_pages = ceil($total_videos / $videos_per_page);
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
         .header-banner {
-            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
-                        url('assets/images/guitar-header.jpg') center/cover;
+            background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
+                        url('assets/images/background.webp') center/cover;
             height: 400px;
             display: flex;
             flex-direction: column;
@@ -46,12 +46,35 @@ $total_pages = ceil($total_videos / $videos_per_page);
             color: white;
             padding: 2rem;
             margin-bottom: 3rem;
+            position: relative;
+            overflow: hidden;
+            background-attachment: fixed;
+            transition: all 0.3s ease;
+        }
+
+        .header-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.7) 100%);
+            z-index: 1;
         }
 
         .header-banner h1 {
             font-size: 3.5rem;
             margin-bottom: 1rem;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 2;
+            letter-spacing: 2px;
+        }
+
+        .header-banner .stats {
+            position: relative;
+            z-index: 2;
         }
 
         .header-description {
