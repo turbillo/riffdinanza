@@ -1,61 +1,109 @@
 <?php
 require_once 'misvars.php';
+session_start();
+
+if (isset($_SESSION['user_id'])) {
+    header('Location: index.php');
+    exit();
+}
+
+function logAudit($email, $status, $user_id = null, $details = null) {
+    $db = getDBConnection();
+    $stmt = $db->prepare("
+        INSERT INTO login_audit 
+        (user_id, email, ip_address, user_agent, status, attempt_time, details) 
+        VALUES (?, ?, ?, ?, ?, NOW(), ?)
+    ");
+    
+    $stmt->execute([
+        $user_id,
+        $email,
+        $_SERVER['REMOTE_ADDR'],
+        $_SERVER['HTTP_USER_AGENT'],
+        $status,
+        $details
+    ]);
+}
+
+function checkLoginAttempts($ip) {
+    $db = getDBConnection();
+    
+    // Limpiar intentos antiguos (más de 10 minutos)
+    $stmt = $db->prepare("DELETE FROM login_attempts WHERE attempt_time < DATE_SUB(NOW(), INTERVAL 10 MINUTE)");
+    $stmt->execute();
+    
+    // Verificar si está bloqueado
+    $stmt = $db->prepare("
+        SELECT COUNT(*) as attempts, 
+               MAX(attempt_time) as last_attempt 
+        FROM login_attempts 
+        WHERE ip_address = ? 
+        AND attempt_time > DATE_SUB(NOW(), INTERVAL 1 MINUTE)
+    ");
+    $stmt->execute([$ip]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($result['attempts'] >= 10) {
+        logAudit('', 'blocked', null, 'Demasiados intentos fallidos: ' . $result['attempts'] . ' intentos');
+        return [
+            'blocked' => true,
+            'remaining_time' => strtotime($result['last_attempt']) + 600 - time()
+        ];
+    }
+    
+    return ['blocked' => false];
+}
+
+function recordLoginAttempt($ip, $email) {
+    $db = getDBConnection();
+    $stmt = $db->prepare("INSERT INTO login_attempts (ip_address, email, attempt_time) VALUES (?, ?, NOW())");
+    $stmt->execute([$ip, $email]);
+}
 
 $error = '';
+$blocked_info = null;
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Verificar captcha
-    $captcha = $_POST['g-recaptcha-response'] ?? '';
-    $secretKey = RECAPTCHA_SECRET_KEY;
-    $verify = file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret={$secretKey}&response={$captcha}");
-    $captchaResult = json_decode($verify);
-
-    if (!$captchaResult->success) {
-        $error = "Por favor, verifica que no eres un robot.";
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $ip = $_SERVER['REMOTE_ADDR'];
+    $check = checkLoginAttempts($ip);
+    
+    if ($check['blocked']) {
+        $blocked_info = $check;
+        $error = "Demasiados intentos fallidos. Por favor, espera " . ceil($check['remaining_time']/60) . " minutos.";
     } else {
-        $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-        $password = $_POST['password'];
-
-        try {
+        $email = $_POST['email'] ?? '';
+        $password = $_POST['password'] ?? '';
+        
+        if (empty($email) || empty($password)) {
+            $error = 'Por favor, completa todos los campos.';
+            logAudit($email, 'failed', null, 'Campos incompletos');
+        } else {
             $db = getDBConnection();
-            
-            // Añadimos un log para debug
-            error_log("Intento de login para email: " . $email);
-            
             $stmt = $db->prepare("SELECT id, email, password FROM users WHERE email = ?");
             $stmt->execute([$email]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($user) {
-                // Añadimos logs para debug
-                error_log("Usuario encontrado con ID: " . $user['id']);
+            
+            if ($user && password_verify($password, $user['password'])) {
+                // Login exitoso
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_email'] = $user['email'];
                 
-                if (password_verify($password, $user['password'])) {
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['user_email'] = $user['email'];
-                    
-                    error_log("Login exitoso para usuario ID: " . $user['id']);
-                    
-                    header('Location: index.php');
-                    exit;
-                } else {
-                    error_log("Contraseña incorrecta para usuario ID: " . $user['id']);
-                    $error = "Correo electrónico o contraseña incorrectos.";
-                }
+                // Registrar login exitoso
+                logAudit($email, 'success', $user['id'], 'Login exitoso');
+                
+                // Limpiar intentos fallidos
+                $stmt = $db->prepare("DELETE FROM login_attempts WHERE ip_address = ?");
+                $stmt->execute([$ip]);
+                
+                header('Location: index.php');
+                exit();
             } else {
-                error_log("No se encontró usuario con email: " . $email);
-                $error = "Correo electrónico o contraseña incorrectos.";
+                recordLoginAttempt($ip, $email);
+                logAudit($email, 'failed', null, 'Credenciales inválidas');
+                $error = 'Credenciales inválidas.';
             }
-        } catch (PDOException $e) {
-            error_log("Error en login: " . $e->getMessage());
-            $error = "Error en el inicio de sesión. Por favor, intenta más tarde.";
         }
     }
-}
-
-// Añadimos un log para ver si hay sesión activa
-if (isset($_SESSION['user_id'])) {
-    error_log("Sesión activa para usuario ID: " . $_SESSION['user_id']);
 }
 ?>
 
@@ -113,6 +161,19 @@ if (isset($_SESSION['user_id'])) {
             border-radius: 4px;
             font-size: 0.9em;
         }
+        .login-error {
+            color: #ff3333;
+            background-color: #ffe6e6;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .blocked-timer {
+            font-weight: bold;
+            color: #ff3333;
+        }
     </style>
 </head>
 <body>
@@ -126,10 +187,17 @@ if (isset($_SESSION['user_id'])) {
         <h2>Iniciar Sesión</h2>
         
         <?php if ($error): ?>
-            <p class="error"><?php echo htmlspecialchars($error); ?></p>
+            <div class="login-error">
+                <?php echo htmlspecialchars($error); ?>
+                <?php if ($blocked_info && $blocked_info['blocked']): ?>
+                    <div class="blocked-timer" id="blocked-timer" 
+                         data-remaining="<?php echo $blocked_info['remaining_time']; ?>">
+                    </div>
+                <?php endif; ?>
+            </div>
         <?php endif; ?>
 
-        <form method="POST" action="">
+        <form method="POST" action="login.php" class="auth-form">
             <div class="form-group">
                 <label for="email">Correo Electrónico:</label>
                 <input type="email" id="email" name="email" required 
@@ -145,8 +213,15 @@ if (isset($_SESSION['user_id'])) {
                 <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
             </div>
 
-            <button type="submit" class="btn">Iniciar Sesión</button>
+            <button type="submit" class="btn"
+                    <?php echo ($blocked_info && $blocked_info['blocked']) ? 'disabled' : ''; ?>>
+                Iniciar Sesión
+            </button>
         </form>
+
+        <div class="auth-links">
+            <a href="register.php">¿No tienes cuenta? Regístrate</a>
+        </div>
 
         <?php if (defined('DEBUG') && DEBUG): ?>
         <div class="debug-info">
@@ -155,5 +230,32 @@ if (isset($_SESSION['user_id'])) {
         </div>
         <?php endif; ?>
     </div>
+
+    <?php if ($blocked_info && $blocked_info['blocked']): ?>
+    <script>
+        function updateTimer() {
+            const timerElement = document.getElementById('blocked-timer');
+            let remaining = parseInt(timerElement.dataset.remaining);
+            
+            const updateDisplay = () => {
+                if (remaining <= 0) {
+                    location.reload();
+                    return;
+                }
+                
+                const minutes = Math.floor(remaining / 60);
+                const seconds = remaining % 60;
+                timerElement.textContent = `Tiempo restante: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                remaining--;
+                timerElement.dataset.remaining = remaining;
+            };
+            
+            updateDisplay();
+            setInterval(updateDisplay, 1000);
+        }
+        
+        document.addEventListener('DOMContentLoaded', updateTimer);
+    </script>
+    <?php endif; ?>
 </body>
 </html> 
