@@ -63,32 +63,66 @@ function saveMessage($name, $email, $message) {
     }
 }
 
+// Función para registrar intentos de contacto
+function recordContactAttempt($ip) {
+    $db = getDBConnection();
+    $stmt = $db->prepare("INSERT INTO contact_attempts (ip_address, attempt_time) VALUES (?, NOW())");
+    $stmt->execute([$ip]);
+}
+
+// Función para verificar límite de intentos
+function isRateLimited($ip) {
+    $db = getDBConnection();
+    $stmt = $db->prepare("
+        SELECT COUNT(*) 
+        FROM contact_attempts 
+        WHERE ip_address = ? 
+        AND attempt_time > DATE_SUB(NOW(), INTERVAL 1 MINUTE)
+    ");
+    $stmt->execute([$ip]);
+    return $stmt->fetchColumn() > 5; // Máximo 5 intentos por minuto
+}
+
 // Procesar formulario
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Verificar captcha primero
-    $captcha = $_POST['g-recaptcha-response'] ?? '';
-    $secretKey = RECAPTCHA_SECRET_KEY;
-    $verify = file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret={$secretKey}&response={$captcha}");
-    $captchaResult = json_decode($verify);
+    $ip = $_SERVER['REMOTE_ADDR'];
 
-    if (!$captchaResult->success) {
-        $error = "Por favor, verifica que no eres un robot.";
+    if (isRateLimited($ip)) {
+        $error = "Demasiados intentos. Por favor, espera un momento.";
     } else {
-        $name = $_POST['name'] ?? '';
-        $email = $_POST['email'] ?? '';
-        $message = $_POST['message'] ?? '';
+        recordContactAttempt($ip);
 
-        if (empty($name) || empty($email) || empty($message)) {
-            $error = "Todos los campos son obligatorios.";
+        // Verificar captcha primero
+        $captcha = $_POST['g-recaptcha-response'] ?? '';
+        $secretKey = RECAPTCHA_SECRET_KEY;
+        $verify = file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret={$secretKey}&response={$captcha}");
+        $captchaResult = json_decode($verify);
+
+        if (!$captchaResult->success) {
+            $error = "Por favor, verifica que no eres un robot.";
         } else {
-            if (saveMessage($name, $email, $message)) {
-                $success = "¡Mensaje enviado correctamente! Te responderemos lo antes posible.";
-            } else {
+            $name = filter_var($_POST['name'], FILTER_SANITIZE_STRING);
+            $email = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL);
+            $message = filter_var($_POST['message'], FILTER_SANITIZE_STRING);
+            $honeypot = $_POST['honeypot'] ?? '';
+
+            if (!$email) {
+                $error = "Por favor, introduce un correo electrónico válido.";
+            } elseif (!empty($honeypot)) {
                 $error = "Error al enviar el mensaje. Por favor, inténtalo de nuevo.";
+            } elseif (empty($name) || empty($email) || empty($message)) {
+                $error = "Todos los campos son obligatorios.";
+            } else {
+                if (saveMessage($name, $email, $message)) {
+                    $success = "¡Mensaje enviado correctamente! Te responderemos lo antes posible.";
+                } else {
+                    $error = "Error al enviar el mensaje. Por favor, inténtalo de nuevo.";
+                }
             }
         }
     }
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -256,29 +290,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <form method="POST" action="">
             <div class="form-group">
                 <label for="name">Nombre:</label>
-                <input type="text" id="name" name="name" required 
-                       value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name']) : ''; ?>"
-                       placeholder="Tu nombre">
+                <input type="text" id="name" name="name" required>
             </div>
-
             <div class="form-group">
                 <label for="email">Correo Electrónico:</label>
-                <input type="email" id="email" name="email" required
-                       value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>"
-                       placeholder="tu@email.com">
+                <input type="email" id="email" name="email" required>
             </div>
-
             <div class="form-group">
                 <label for="message">Mensaje:</label>
-                <textarea id="message" name="message" required
-                          placeholder="¿Qué te gustaría decirnos?"><?php echo isset($_POST['message']) ? htmlspecialchars($_POST['message']) : ''; ?></textarea>
+                <textarea id="message" name="message" required></textarea>
             </div>
-
-            <div class="form-group">
-                <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
+            <!-- Honeypot field -->
+            <div style="display: none;">
+                <label for="honeypot">No llenar este campo:</label>
+                <input type="text" id="honeypot" name="honeypot">
             </div>
-
-            <button type="submit" class="submit-btn">Enviar Mensaje</button>
+            <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
+            <button type="submit">Enviar</button>
         </form>
 
         <div class="contact-info">
@@ -291,4 +319,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </div>
     </div>
 </body>
-</html> 
+</html>
