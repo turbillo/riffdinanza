@@ -53,7 +53,7 @@ $total_records = $stmt->fetchColumn();
 $total_pages = ceil($total_records / $records_per_page);
 
 // Obtener registros de la página actual
-$query = "SELECT la.*, u.email as user_email " . $query . " 
+$query = "SELECT la.*, u.email as user_email, u.created_at as user_created_at " . $query . " 
           ORDER BY la.attempt_time DESC 
           LIMIT $records_per_page OFFSET $offset";
 $stmt = $db->prepare($query);
@@ -222,6 +222,7 @@ $audit_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <th>Estado</th>
                     <th>Navegador</th>
                     <th>Detalles</th>
+                    <th>Usuario Creado</th>
                 </tr>
             </thead>
             <tbody>
@@ -244,6 +245,7 @@ $audit_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </td>
                         <td><?php echo htmlspecialchars(substr($record['user_agent'], 0, 50)) . '...'; ?></td>
                         <td><?php echo htmlspecialchars($record['details']); ?></td>
+                        <td><?php echo $record['user_created_at'] ? date('d/m/Y', strtotime($record['user_created_at'])) : 'N/A'; ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

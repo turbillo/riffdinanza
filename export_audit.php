@@ -23,7 +23,8 @@ $query = "SELECT
             la.ip_address,
             la.status,
             la.user_agent,
-            la.details
+            la.details,
+            u.created_at as user_created_at
           FROM login_audit la 
           LEFT JOIN users u ON la.user_id = u.id 
           WHERE 1=1";
@@ -72,7 +73,8 @@ fputcsv($output, [
     'Dirección IP',
     'Estado',
     'Navegador',
-    'Detalles'
+    'Detalles',
+    'Usuario Creado'
 ]);
 
 // Datos
@@ -90,7 +92,8 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $row['ip_address'],
         $status,
         $row['user_agent'],
-        $row['details']
+        $row['details'],
+        $row['user_created_at'] ? date('d/m/Y', strtotime($row['user_created_at'])) : 'N/A'
     ]);
 }
 

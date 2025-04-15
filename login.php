@@ -199,26 +199,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <form method="POST" action="login.php" class="auth-form">
             <div class="form-group">
-                <label for="email">Correo Electrónico:</label>
-                <input type="email" id="email" name="email" required 
-                       value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
             </div>
-
+            
             <div class="form-group">
                 <label for="password">Contraseña:</label>
                 <input type="password" id="password" name="password" required>
             </div>
-
-            <div class="form-group">
-                <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
-            </div>
-
-            <button type="submit" class="btn"
+            
+            <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
+            
+            <button type="submit" class="btn btn-primary"
                     <?php echo ($blocked_info && $blocked_info['blocked']) ? 'disabled' : ''; ?>>
                 Iniciar Sesión
             </button>
         </form>
-
+        
         <div class="auth-links">
             <a href="register.php">¿No tienes cuenta? Regístrate</a>
         </div>

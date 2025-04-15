@@ -51,10 +51,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Obtener lista de usuarios
+// Obtener lista de usuarios con su último login
 try {
     $db = getDBConnection();
-    $stmt = $db->query("SELECT id, email, role, created_at FROM users ORDER BY id");
+    $stmt = $db->query("
+        SELECT 
+            u.id, 
+            u.email, 
+            u.role, 
+            u.created_at, 
+            (
+                SELECT MAX(la.attempt_time) 
+                FROM login_audit la 
+                WHERE la.user_id = u.id AND la.status = 'success'
+            ) AS last_login
+        FROM users u
+        ORDER BY u.id
+    ");
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     $error = "Error al obtener usuarios: " . $e->getMessage();
@@ -91,6 +104,7 @@ try {
                     <th>Email</th>
                     <th>Rol</th>
                     <th>Fecha Registro</th>
+                    <th>Último Login</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -101,6 +115,7 @@ try {
                     <td><?php echo htmlspecialchars($user['email']); ?></td>
                     <td><?php echo htmlspecialchars($user['role'] ?? 'usuario'); ?></td>
                     <td><?php echo htmlspecialchars($user['created_at']); ?></td>
+                    <td><?php echo $user['last_login'] ? htmlspecialchars($user['last_login']) : 'Nunca'; ?></td>
                     <td>
                         <button class="btn btn-edit" 
                                 onclick="showEditForm(<?php echo $user['id']; ?>, 
@@ -199,4 +214,4 @@ try {
     }
     </script>
 </body>
-</html> 
+</html>
